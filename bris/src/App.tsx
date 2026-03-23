@@ -178,6 +178,7 @@ function App() {
             <div className="max-h-[85vh] overflow-y-auto">
               <ResidentCard 
                 resident={selectedResident} 
+                isDetail={true}
                 onAddTransaction={(id) => setTransactionTarget({ id, name: selectedResident.name })}
               />
               <div className="p-6 pt-0 border-t border-gray-100 mt-6 bg-gray-50 flex justify-end">
