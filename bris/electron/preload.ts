@@ -25,5 +25,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     searchResidents: (query: string) => ipcRenderer.invoke('db:search-residents', query),
     addResident: (resident: any) => ipcRenderer.invoke('db:add-resident', resident),
     addTransaction: (transaction: any) => ipcRenderer.invoke('db:add-transaction', transaction),
+    backup: () => ipcRenderer.invoke('db:backup'),
+    restore: () => ipcRenderer.invoke('db:restore'),
   }
 })

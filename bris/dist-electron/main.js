@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import { fileURLToPath } from "node:url";
 import path$1 from "node:path";
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 const dbPath = path.join(app.getPath("userData"), "bris.db");
-const db = new Database(dbPath);
+let db = new Database(dbPath);
 function initDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS residents (
@@ -79,6 +80,27 @@ function addTransaction(transaction) {
   );
   return info.lastInsertRowid;
 }
+async function backupDatabase(destPath) {
+  try {
+    await db.backup(destPath);
+    return true;
+  } catch (error) {
+    console.error("Backup failed:", error);
+    throw error;
+  }
+}
+async function restoreDatabase(srcPath) {
+  try {
+    db.close();
+    fs.copyFileSync(srcPath, dbPath);
+    db = new Database(dbPath);
+    return true;
+  } catch (error) {
+    console.error("Restore failed:", error);
+    db = new Database(dbPath);
+    throw error;
+  }
+}
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path$1.dirname(__filename$1);
 process.env.APP_ROOT = path$1.join(__dirname$1, "..");
@@ -107,6 +129,32 @@ function createWindow() {
   });
   ipcMain.handle("db:add-transaction", async (_, transaction) => {
     return addTransaction(transaction);
+  });
+  ipcMain.handle("db:backup", async () => {
+    if (!win) return false;
+    const { filePath } = await dialog.showSaveDialog(win, {
+      title: "Backup Database",
+      defaultPath: "bris_backup.db",
+      filters: [{ name: "SQLite Database", extensions: ["db"] }]
+    });
+    if (filePath) {
+      await backupDatabase(filePath);
+      return true;
+    }
+    return false;
+  });
+  ipcMain.handle("db:restore", async () => {
+    if (!win) return false;
+    const { filePaths } = await dialog.showOpenDialog(win, {
+      title: "Restore Database",
+      filters: [{ name: "SQLite Database", extensions: ["db"] }],
+      properties: ["openFile"]
+    });
+    if (filePaths && filePaths.length > 0) {
+      await restoreDatabase(filePaths[0]);
+      return true;
+    }
+    return false;
   });
   initDatabase();
   win.webContents.on("did-finish-load", () => {

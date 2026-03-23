@@ -1,9 +1,10 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { app } from 'electron';
+import fs from 'fs';
 
 const dbPath = path.join(app.getPath('userData'), 'bris.db');
-const db = new Database(dbPath);
+let db = new Database(dbPath);
 
 export function initDatabase() {
   db.exec(`
@@ -82,6 +83,29 @@ export function addTransaction(transaction: any) {
     transaction.purpose
   );
   return info.lastInsertRowid;
+}
+
+export async function backupDatabase(destPath: string) {
+  try {
+    await db.backup(destPath);
+    return true;
+  } catch (error) {
+    console.error('Backup failed:', error);
+    throw error;
+  }
+}
+
+export async function restoreDatabase(srcPath: string) {
+  try {
+    db.close();
+    fs.copyFileSync(srcPath, dbPath);
+    db = new Database(dbPath);
+    return true;
+  } catch (error) {
+    console.error('Restore failed:', error);
+    db = new Database(dbPath); // Try to recover connection
+    throw error;
+  }
 }
 
 export default db;

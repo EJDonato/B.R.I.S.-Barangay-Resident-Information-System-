@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, getAllResidents, searchResidents, addResident, addTransaction } from './database'
+import { initDatabase, getAllResidents, searchResidents, addResident, addTransaction, backupDatabase, restoreDatabase } from './database'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -42,6 +42,34 @@ function createWindow() {
   ipcMain.handle('db:add-transaction', async (_, transaction) => {
     return addTransaction(transaction)
   })
+
+  ipcMain.handle('db:backup', async () => {
+    if (!win) return false;
+    const { filePath } = await dialog.showSaveDialog(win, {
+      title: 'Backup Database',
+      defaultPath: 'bris_backup.db',
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }]
+    });
+    if (filePath) {
+      await backupDatabase(filePath);
+      return true;
+    }
+    return false;
+  });
+
+  ipcMain.handle('db:restore', async () => {
+    if (!win) return false;
+    const { filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Restore Database',
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+      properties: ['openFile']
+    });
+    if (filePaths && filePaths.length > 0) {
+      await restoreDatabase(filePaths[0]);
+      return true;
+    }
+    return false;
+  });
 
   initDatabase()
 

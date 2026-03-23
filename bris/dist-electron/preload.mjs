@@ -22,6 +22,8 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
     getResidents: () => electron.ipcRenderer.invoke("db:get-residents"),
     searchResidents: (query) => electron.ipcRenderer.invoke("db:search-residents", query),
     addResident: (resident) => electron.ipcRenderer.invoke("db:add-resident", resident),
-    addTransaction: (transaction) => electron.ipcRenderer.invoke("db:add-transaction", transaction)
+    addTransaction: (transaction) => electron.ipcRenderer.invoke("db:add-transaction", transaction),
+    backup: () => electron.ipcRenderer.invoke("db:backup"),
+    restore: () => electron.ipcRenderer.invoke("db:restore")
   }
 });

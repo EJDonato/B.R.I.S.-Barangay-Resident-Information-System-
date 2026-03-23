@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, UserPlus, SearchCheck } from 'lucide-react'
+import { X, UserPlus, SearchCheck, Download, Upload } from 'lucide-react'
 import Header from './components/header'
 import ResidentCard from './components/ResidentCard'
 import AddResidentModal from './components/AddResidentModal'
@@ -54,23 +54,68 @@ function App() {
     }
   };
 
+  const handleBackup = async () => {
+    try {
+      const success = await (window as any).ipcRenderer.db.backup();
+      if (success) {
+        alert('Database backup created successfully!');
+      }
+    } catch (error) {
+      console.error('Backup failed:', error);
+      alert('Failed to backup database.');
+    }
+  };
+
+  const handleRestore = async () => {
+    if (confirm('Are you sure you want to restore? This will replace your current database.')) {
+      try {
+        const success = await (window as any).ipcRenderer.db.restore();
+        if (success) {
+          alert('Database restored successfully!');
+          fetchResidents();
+        }
+      } catch (error) {
+        console.error('Restore failed:', error);
+        alert('Failed to restore database. Please check the file.');
+      }
+    }
+  };
+
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex flex-col'>
       <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 md:p-8">
-        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="mb-8 flex flex-col lg:flex-row justify-between lg:items-center gap-6">
           <h2 className="text-2xl font-black text-gray-800 flex items-center gap-3">
             <SearchCheck className="w-8 h-8 text-green-600" />
             {searchQuery ? `Search Results for "${searchQuery}"` : 'Recent Residents'}
           </h2>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-green-200 transition-all active:scale-95"
-          >
-            <UserPlus className="w-5 h-5" />
-            Add New Resident
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button 
+              onClick={handleBackup}
+              title="Backup Database"
+              className="flex items-center gap-2 bg-white border-2 border-emerald-200 hover:border-emerald-400 text-emerald-700 px-4 py-3 rounded-2xl font-bold transition-all shadow-sm active:scale-95"
+            >
+              <Download className="w-5 h-5" />
+              Backup
+            </button>
+            <button 
+              onClick={handleRestore}
+              title="Restore Database"
+              className="flex items-center gap-2 bg-white border-2 border-blue-200 hover:border-blue-400 text-blue-700 px-4 py-3 rounded-2xl font-bold transition-all shadow-sm active:scale-95"
+            >
+              <Upload className="w-5 h-5" />
+              Restore
+            </button>
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-green-200 transition-all active:scale-95"
+            >
+              <UserPlus className="w-5 h-5" />
+              Add New Resident
+            </button>
+          </div>
         </div>
 
         {residents.length > 0 ? (
