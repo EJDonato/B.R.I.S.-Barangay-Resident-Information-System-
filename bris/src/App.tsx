@@ -1,77 +1,116 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, UserPlus, SearchCheck } from 'lucide-react'
 import Header from './components/header'
 import ResidentCard from './components/ResidentCard'
-import { mockResidents } from './data/mockResidents'
+import AddResidentModal from './components/AddResidentModal'
+import AddTransactionModal from './components/AddTransactionModal'
 import { Resident } from './types'
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [transactionTarget, setTransactionTarget] = useState<{id: string, name: string} | null>(null);
 
-  const filteredResidents = mockResidents.filter(resident =>
-    resident.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const fetchResidents = async () => {
+    try {
+      const data = searchQuery 
+        ? await (window as any).ipcRenderer.db.searchResidents(searchQuery)
+        : await (window as any).ipcRenderer.db.getResidents();
+      setResidents(data);
+      
+      // Update selected resident if modal is open to reflect new transactions
+      if (selectedResident) {
+        const updatedSelected = data.find((r: Resident) => r.id === selectedResident.id);
+        if (updatedSelected) setSelectedResident(updatedSelected);
+      }
+    } catch (error) {
+      console.error('Failed to fetch residents:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchResidents();
+  }, [searchQuery]);
+
+  const handleAddResident = async (formData: any) => {
+    try {
+      await (window as any).ipcRenderer.db.addResident(formData);
+      setIsAddModalOpen(false);
+      fetchResidents();
+    } catch (error) {
+      console.error('Failed to add resident:', error);
+    }
+  };
+
+  const handleAddTransaction = async (formData: any) => {
+    try {
+      await (window as any).ipcRenderer.db.addTransaction(formData);
+      setTransactionTarget(null);
+      fetchResidents();
+    } catch (error) {
+      console.error('Failed to add transaction:', error);
+    }
+  };
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex flex-col'>
       <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 md:p-8">
-        {searchQuery ? (
+        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl font-black text-gray-800 flex items-center gap-3">
+            <SearchCheck className="w-8 h-8 text-green-600" />
+            {searchQuery ? `Search Results for "${searchQuery}"` : 'Recent Residents'}
+          </h2>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-green-200 transition-all active:scale-95"
+          >
+            <UserPlus className="w-5 h-5" />
+            Add New Resident
+          </button>
+        </div>
+
+        {residents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredResidents.length > 0 ? (
-              filteredResidents.map(resident => (
-                <div 
-                  key={resident.id} 
-                  onClick={() => setSelectedResident(resident)}
-                  className="cursor-pointer transform hover:-translate-y-1 transition-transform duration-300"
-                >
-                  <ResidentCard resident={resident} />
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-400">
-                <div className="bg-gray-100 p-6 rounded-full mb-4">
-                  <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-xl font-medium">No residents found matching "{searchQuery}"</p>
+            {residents.map(resident => (
+              <div 
+                key={resident.id} 
+                onClick={() => setSelectedResident(resident)}
+                className="cursor-pointer transform hover:-translate-y-1 transition-transform duration-300"
+              >
+                <ResidentCard 
+                  resident={resident} 
+                  onAddTransaction={(id) => setTransactionTarget({ id, name: resident.name })}
+                />
               </div>
-            )}
+            ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <h3 className="text-3xl font-bold text-green-800 mb-4 tracking-tight">Welcome to B.R.I.S</h3>
-            <p className="text-gray-600 max-w-md text-lg leading-relaxed">
-              Scan through the Barangay Resident database. Type a name above to get started.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-6">
-              <div className="bg-white/60 backdrop-blur-md p-5 rounded-3xl shadow-sm border border-green-100 flex items-center gap-4 min-w-[200px]">
-                <div className="bg-green-100 p-3 rounded-2xl text-green-600">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-xs text-gray-400 uppercase font-black tracking-widest">Residents</p>
-                  <p className="text-2xl font-black text-gray-800">{mockResidents.length}</p>
-                </div>
+          searchQuery ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <div className="bg-gray-100 p-6 rounded-full mb-4">
+                <X className="w-12 h-12" />
               </div>
-              <div className="bg-white/60 backdrop-blur-md p-5 rounded-3xl shadow-sm border border-blue-100 flex items-center gap-4 min-w-[200px]">
-                <div className="bg-blue-100 p-3 rounded-2xl text-blue-600">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-xs text-gray-400 uppercase font-black tracking-widest">Security</p>
-                  <p className="text-2xl font-black text-gray-800">Verified</p>
-                </div>
-              </div>
+              <p className="text-xl font-medium">No residents found matching "{searchQuery}"</p>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <h3 className="text-3xl font-bold text-green-800 mb-4 tracking-tight">System Ready</h3>
+              <p className="text-gray-600 max-w-md text-lg leading-relaxed">
+                Your database is empty. Start by adding your first barangay resident to the system.
+              </p>
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="mt-8 flex items-center gap-3 bg-white border-2 border-green-600 text-green-700 hover:bg-green-50 px-8 py-4 rounded-3xl font-black transition-all shadow-xl shadow-green-100"
+              >
+                <UserPlus className="w-6 h-6" />
+                Initialize First Resident
+              </button>
+            </div>
+          )
         )}
       </main>
 
@@ -86,13 +125,16 @@ function App() {
             <div className="absolute top-4 right-4 z-10">
               <button 
                 onClick={() => setSelectedResident(null)}
-                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+                className="p-2 bg-gray-100 font-bold hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="max-h-[85vh] overflow-y-auto">
-              <ResidentCard resident={selectedResident} />
+              <ResidentCard 
+                resident={selectedResident} 
+                onAddTransaction={(id) => setTransactionTarget({ id, name: selectedResident.name })}
+              />
               <div className="p-6 pt-0 border-t border-gray-100 mt-6 bg-gray-50 flex justify-end">
                 <button 
                   onClick={() => setSelectedResident(null)}
@@ -106,13 +148,30 @@ function App() {
         </div>
       )}
 
+      {isAddModalOpen && (
+        <AddResidentModal 
+          onClose={() => setIsAddModalOpen(false)} 
+          onAdd={handleAddResident}
+        />
+      )}
 
-      <footer className="py-6 text-center text-gray-400 text-sm border-t border-gray-100 bg-white/30">
-        &copy; 2026 Barangay Resident Information System. All Rights Reserved.
+      {transactionTarget && (
+        <AddTransactionModal
+          residentId={transactionTarget.id}
+          residentName={transactionTarget.name}
+          onClose={() => setTransactionTarget(null)}
+          onAdd={handleAddTransaction}
+        />
+      )}
+
+      <footer className="py-6 text-center text-gray-400 text-sm border-t border-gray-100 bg-white/30 font-medium">
+        &copy; 2026 B.R.I.S. Secure SQLite Environment
       </footer>
     </div>
   );
 }
+
+
 
 
 export default App

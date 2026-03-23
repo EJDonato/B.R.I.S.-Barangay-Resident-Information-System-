@@ -16,7 +16,12 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
   invoke(...args) {
     const [channel, ...omit] = args;
     return electron.ipcRenderer.invoke(channel, ...omit);
-  }
+  },
   // You can expose other APTs you need here.
-  // ...
+  db: {
+    getResidents: () => electron.ipcRenderer.invoke("db:get-residents"),
+    searchResidents: (query) => electron.ipcRenderer.invoke("db:search-residents", query),
+    addResident: (resident) => electron.ipcRenderer.invoke("db:add-resident", resident),
+    addTransaction: (transaction) => electron.ipcRenderer.invoke("db:add-transaction", transaction)
+  }
 });

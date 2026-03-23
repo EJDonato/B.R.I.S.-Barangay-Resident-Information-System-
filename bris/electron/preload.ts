@@ -20,5 +20,10 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   },
 
   // You can expose other APTs you need here.
-  // ...
+  db: {
+    getResidents: () => ipcRenderer.invoke('db:get-residents'),
+    searchResidents: (query: string) => ipcRenderer.invoke('db:search-residents', query),
+    addResident: (resident: any) => ipcRenderer.invoke('db:add-resident', resident),
+    addTransaction: (transaction: any) => ipcRenderer.invoke('db:add-transaction', transaction),
+  }
 })

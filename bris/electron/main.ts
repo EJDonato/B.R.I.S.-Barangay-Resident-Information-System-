@@ -1,23 +1,13 @@
-import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { initDatabase, getAllResidents, searchResidents, addResident, addTransaction } from './database'
 
-const require = createRequire(import.meta.url)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
 process.env.APP_ROOT = path.join(__dirname, '..')
 
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
@@ -31,8 +21,29 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   })
+
+  // Register IPC handlers
+  ipcMain.handle('db:get-residents', async () => {
+    return getAllResidents()
+  })
+
+  ipcMain.handle('db:search-residents', async (_, query) => {
+    return searchResidents(query)
+  })
+
+  ipcMain.handle('db:add-resident', async (_, resident) => {
+    return addResident(resident)
+  })
+
+  ipcMain.handle('db:add-transaction', async (_, transaction) => {
+    return addTransaction(transaction)
+  })
+
+  initDatabase()
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -46,6 +57,7 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 }
+
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
