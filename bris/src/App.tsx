@@ -11,6 +11,7 @@ function App() {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [transactionTarget, setTransactionTarget] = useState<{id: string, name: string} | null>(null);
 
   const fetchResidents = async () => {
@@ -20,7 +21,7 @@ function App() {
         : await (window as any).ipcRenderer.db.getResidents();
       setResidents(data);
       
-      // Update selected resident if modal is open to reflect new transactions
+      // Update selected resident if modal is open to reflect new transactions/edits
       if (selectedResident) {
         const updatedSelected = data.find((r: Resident) => r.id === selectedResident.id);
         if (updatedSelected) setSelectedResident(updatedSelected);
@@ -44,6 +45,16 @@ function App() {
     }
   };
 
+  const handleUpdateResident = async (formData: any) => {
+    try {
+      await (window as any).ipcRenderer.db.updateResident(formData);
+      setEditingResident(null);
+      fetchResidents();
+    } catch (error) {
+      console.error('Failed to update resident:', error);
+    }
+  };
+
   const handleAddTransaction = async (formData: any) => {
     try {
       await (window as any).ipcRenderer.db.addTransaction(formData);
@@ -51,6 +62,15 @@ function App() {
       fetchResidents();
     } catch (error) {
       console.error('Failed to add transaction:', error);
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await (window as any).ipcRenderer.db.deleteTransaction(id);
+      fetchResidents();
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
     }
   };
 
@@ -78,6 +98,18 @@ function App() {
         console.error('Restore failed:', error);
         alert('Failed to restore database. Please check the file.');
       }
+    }
+  };
+
+  const handleDeleteResident = async (id: string) => {
+    try {
+      const success = await (window as any).ipcRenderer.db.deleteResident(id);
+      if (success) {
+        setSelectedResident(null);
+        fetchResidents();
+      }
+    } catch (error) {
+      console.error('Failed to delete resident:', error);
     }
   };
 
@@ -175,20 +207,15 @@ function App() {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="max-h-[85vh] overflow-y-auto">
+            <div className="max-h-[85vh] overflow-y-auto custom-scrollbar">
               <ResidentCard 
                 resident={selectedResident} 
                 isDetail={true}
                 onAddTransaction={(id) => setTransactionTarget({ id, name: selectedResident.name })}
+                onDelete={handleDeleteResident}
+                onEdit={(res) => setEditingResident(res)}
+                onDeleteTransaction={handleDeleteTransaction}
               />
-              <div className="p-6 pt-0 border-t border-gray-100 mt-6 bg-gray-50 flex justify-end">
-                <button 
-                  onClick={() => setSelectedResident(null)}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-green-200"
-                >
-                  Close Profile
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -197,7 +224,15 @@ function App() {
       {isAddModalOpen && (
         <AddResidentModal 
           onClose={() => setIsAddModalOpen(false)} 
-          onAdd={handleAddResident}
+          onSave={handleAddResident}
+        />
+      )}
+
+      {editingResident && (
+        <AddResidentModal 
+          initialData={editingResident}
+          onClose={() => setEditingResident(null)} 
+          onSave={handleUpdateResident}
         />
       )}
 

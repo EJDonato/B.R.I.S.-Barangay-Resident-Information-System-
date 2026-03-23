@@ -85,6 +85,34 @@ export function addTransaction(transaction: any) {
   return info.lastInsertRowid;
 }
 
+export function deleteResident(id: string) {
+  const info = db.prepare('DELETE FROM residents WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+export function deleteTransaction(id: string) {
+  const info = db.prepare('DELETE FROM transactions WHERE id = ?').run(id);
+  return info.changes > 0;
+}
+
+export function updateResident(resident: any) {
+  const info = db.prepare(`
+    UPDATE residents 
+    SET name = ?, birthday = ?, address = ?, telephone = ?, is_voter = ?, occupation = ?, image_url = ?
+    WHERE id = ?
+  `).run(
+    resident.name,
+    resident.birthday,
+    resident.address,
+    resident.telephone,
+    resident.isVoter ? 1 : 0,
+    resident.occupation,
+    resident.imageUrl,
+    resident.id
+  );
+  return info.changes > 0;
+}
+
 export async function backupDatabase(destPath: string) {
   try {
     await db.backup(destPath);

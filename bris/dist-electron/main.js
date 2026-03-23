@@ -80,6 +80,31 @@ function addTransaction(transaction) {
   );
   return info.lastInsertRowid;
 }
+function deleteResident(id) {
+  const info = db.prepare("DELETE FROM residents WHERE id = ?").run(id);
+  return info.changes > 0;
+}
+function deleteTransaction(id) {
+  const info = db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
+  return info.changes > 0;
+}
+function updateResident(resident) {
+  const info = db.prepare(`
+    UPDATE residents 
+    SET name = ?, birthday = ?, address = ?, telephone = ?, is_voter = ?, occupation = ?, image_url = ?
+    WHERE id = ?
+  `).run(
+    resident.name,
+    resident.birthday,
+    resident.address,
+    resident.telephone,
+    resident.isVoter ? 1 : 0,
+    resident.occupation,
+    resident.imageUrl,
+    resident.id
+  );
+  return info.changes > 0;
+}
 async function backupDatabase(destPath) {
   try {
     await db.backup(destPath);
@@ -129,6 +154,15 @@ function createWindow() {
   });
   ipcMain.handle("db:add-transaction", async (_, transaction) => {
     return addTransaction(transaction);
+  });
+  ipcMain.handle("db:delete-resident", async (_, id) => {
+    return deleteResident(id);
+  });
+  ipcMain.handle("db:delete-transaction", async (_, id) => {
+    return deleteTransaction(id);
+  });
+  ipcMain.handle("db:update-resident", async (_, resident) => {
+    return updateResident(resident);
   });
   ipcMain.handle("db:backup", async () => {
     if (!win) return false;

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, getAllResidents, searchResidents, addResident, addTransaction, backupDatabase, restoreDatabase } from './database'
+import { initDatabase, getAllResidents, searchResidents, addResident, addTransaction, backupDatabase, restoreDatabase, deleteResident, deleteTransaction, updateResident } from './database'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -41,6 +41,18 @@ function createWindow() {
 
   ipcMain.handle('db:add-transaction', async (_, transaction) => {
     return addTransaction(transaction)
+  })
+
+  ipcMain.handle('db:delete-resident', async (_, id) => {
+    return deleteResident(id)
+  })
+
+  ipcMain.handle('db:delete-transaction', async (_, id) => {
+    return deleteTransaction(id)
+  })
+
+  ipcMain.handle('db:update-resident', async (_, resident) => {
+    return updateResident(resident)
   })
 
   ipcMain.handle('db:backup', async () => {

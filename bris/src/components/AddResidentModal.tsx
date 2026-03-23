@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { X, User, Calendar, MapPin, Phone, Briefcase, CheckCircle } from 'lucide-react';
 
-interface AddResidentModalProps {
+interface ResidentModalProps {
   onClose: () => void;
-  onAdd: (resident: any) => void;
+  onSave: (resident: any) => void;
+  initialData?: any;
 }
 
-function AddResidentModal({ onClose, onAdd }: AddResidentModalProps) {
-  const [formData, setFormData] = useState({
+function AddResidentModal({ onClose, onSave, initialData }: ResidentModalProps) {
+  // If editing, strip the suffix for easier editing, or just leave it.
+  // Actually, for simplicity, we'll let them edit the whole thing or just assume they add to the start.
+  
+  const [formData, setFormData] = useState(initialData ? {
+    ...initialData,
+    // Try to strip the suffix for the textarea if it exists
+    address: initialData.address.replace(', Lambakin, Marilao, Bulacan', '')
+  } : {
     name: '',
     birthday: '',
     address: '',
@@ -18,7 +26,14 @@ function AddResidentModal({ onClose, onAdd }: AddResidentModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(formData);
+    // Concatenate the fixed barangay, municipality, and province
+    const finalData = {
+      ...formData,
+      address: formData.address.includes('Lambakin, Marilao, Bulacan') 
+        ? formData.address 
+        : `${formData.address}, Lambakin, Marilao, Bulacan`
+    };
+    onSave(finalData);
   };
 
   return (
@@ -28,20 +43,20 @@ function AddResidentModal({ onClose, onAdd }: AddResidentModalProps) {
         onClick={onClose}
       ></div>
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-green-50">
-          <h2 className="text-2xl font-black text-green-900 flex items-center gap-2">
+        <div className={`p-6 border-b border-gray-100 flex justify-between items-center ${initialData ? 'bg-blue-50' : 'bg-green-50'}`}>
+          <h2 className={`text-2xl font-black flex items-center gap-2 ${initialData ? 'text-blue-900' : 'text-green-900'}`}>
             <User className="w-6 h-6" />
-            New Resident Profile
+            {initialData ? 'Edit Resident Profile' : 'New Resident Profile'}
           </h2>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-green-100 rounded-full text-green-700 transition-colors"
+            className={`p-2 rounded-full transition-colors ${initialData ? 'hover:bg-blue-100 text-blue-700' : 'hover:bg-green-100 text-green-700'}`}
           >
             <X className="w-6 h-6" />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
           <div className="space-y-2">
             <label className="text-sm font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <User className="w-4 h-4" /> Full Name
@@ -90,7 +105,7 @@ function AddResidentModal({ onClose, onAdd }: AddResidentModalProps) {
             <textarea 
               required
               className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all font-medium text-gray-700 min-h-[100px]"
-              placeholder="Street, Barangay, City/Municipality"
+              placeholder="e.g. Unit 123 House Number, Street (Lambakin, Marilao, Bulacan is added automatically)"
               value={formData.address}
               onChange={e => setFormData({...formData, address: e.target.value})}
             ></textarea>
@@ -122,9 +137,9 @@ function AddResidentModal({ onClose, onAdd }: AddResidentModalProps) {
           <div className="pt-6">
             <button 
               type="submit"
-              className="w-full p-5 bg-green-600 hover:bg-green-700 text-white font-black text-lg rounded-2xl transition-all shadow-xl shadow-green-200 active:scale-[0.98]"
+              className={`w-full p-5 text-white font-black text-lg rounded-2xl transition-all shadow-xl active:scale-[0.98] ${initialData ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}
             >
-              Securely Save Profile
+              {initialData ? 'Update Profile' : 'Securely Save Profile'}
             </button>
           </div>
         </form>
